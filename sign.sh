@@ -14,8 +14,9 @@ SIGN_RET=""
 USERNAME=""
 PASSWORD=""
 
-CONFIG_FILE="sign.config.json"
-TEMP_FILE=".sign.temp"
+WORK_DIR=$(cd "$(dirname "$0")" && pwd)
+CONFIG_FILE="$WORK_DIR/sign.config.json"
+TEMP_FILE="$WORK_DIR/.sign.temp"
 USER_AGENT="mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.152 Safari/537.36"
 
 _p() {
