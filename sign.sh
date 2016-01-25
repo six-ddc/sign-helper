@@ -58,7 +58,7 @@ _zimuzu() {
     dosign_url="http://www.zimuzu.tv/user/sign/dosign"
     http --session $SESSION_NAME $login_url >/dev/null
     body=$(http --print b --session $SESSION_NAME -f POST $login_ajax "account=$USERNAME" "password=$PASSWORD" "remember=1" "url_back=$host_url" Referer:$login_url)
-    _p "LOGIN: $body"
+    # _p "LOGIN: $body"
     if [ $(echo "$body" | jq '.status') -ne 1 ]; then
         SIGN_RET=$(echo "$body" | jq -r '.info')
         return -1
@@ -67,7 +67,7 @@ _zimuzu() {
     _p "sleep 15s..."
     sleep 15
     body=$(http --print b --session $SESSION_NAME $dosign_url)
-    _p "SIGN: $body"
+    # _p "SIGN: $body"
     if [ $(echo "$body" | jq '.status') -ne 1 ]; then
         # {"status":0,"info":"","data":0}
         # 已经签到
@@ -217,9 +217,13 @@ while true
 do
     _check
     if [ $# -gt 0 ]; then
-        op=${!i}
+        if [ "$1"x = "all"x ]; then
+            op=$(jq -r "keys[$(($i-1))]" $CONFIG_FILE)
+        else
+            op=${!i}
+        fi
         i=$(($i+1))
-        if [ -z $op ]; then
+        if [ -z $op ] || [ "$op" = "null" ]; then
             break
         fi
     else
