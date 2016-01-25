@@ -35,7 +35,7 @@ _check() {
     for var in ${exec[@]};
     do
         type $var >/dev/null 2>/dev/null
-        if [ $? != 0 ]; then
+        if [ $? -ne 0 ]; then
             _p "${RED}脚本依赖的执行程序${var}不存在，安装参考README.md"
             ret=1
         fi
@@ -85,7 +85,7 @@ _v2ex() {
     v2ex_sign='https://www.v2ex.com/signin'
     http --session $SESSION_NAME $v2ex_sign >$TEMP_FILE
     grep '登出' $TEMP_FILE >/dev/null
-    if [ $? != 0 ]; then
+    if [ $? -ne 0 ]; then
         once=$(grep 'name="once"' $TEMP_FILE)
         reg_once='value="([0-9]+)" name="once"'
         if [[ $once =~ $reg_once ]]; then
@@ -210,6 +210,37 @@ _smzdm() {
     fi
     SIGN_RET=${checkin_num}
     return 0
+}
+
+_v2dn() {
+    host_url="http://www.v2dn.com/"
+    login_url="http://www.v2dn.com/login.php"
+    login_post="http://www.v2dn.com/loginUpdate.php"
+    checkin_url="http://www.v2dn.com/checkIn.php"
+    point_url="http://www.v2dn.com/mypoints.php"
+    http --session $SESSION_NAME $login_url "User-Agent:$USER_AGENT" >$TEMP_FILE
+    md5_match=$(grep 'md5' $TEMP_FILE)
+    if [ $? -ne 0 ]; then
+        SIGN_RET="签到异常"
+        return -1
+    fi
+    reg_md5='md5.*value="(.+)">'
+    if [[ $md5_match =~ $reg_md5 ]]; then
+        md5str=${BASH_REMATCH[1]}
+        body=$(http --session $SESSION_NAME -f POST $login_post "email=$USERNAME" "password=$PASSWORD" "md5=$md5str" "button= 登 录" "User-Agent:$USER_AGENT" "Referer:$login_url")
+        http --session $SESSION_NAME $host_url >/dev/null
+        http --session $SESSION_NAME $checkin_url >/dev/null
+        http --session $SESSION_NAME $point_url >$TEMP_FILE
+        point_match=$(grep 'balance_area' $TEMP_FILE)
+        reg_point='([0-9]+)</div>'
+        if [[ $point_match =~ $reg_point ]]; then
+            point=${BASH_REMATCH[1]}
+            _p "point:$point"
+        fi
+    else
+        SIGN_RET="签到异常"
+        return -1
+    fi
 }
 
 i=1
