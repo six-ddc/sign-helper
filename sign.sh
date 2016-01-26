@@ -243,6 +243,41 @@ _v2dn() {
     fi
 }
 
+__sign() {
+    op="$1"
+    MODE=$op
+    SIGN_RET=""
+    # 部分用户名可能带特殊符号，所以这里做了编码处理
+    base64_u=$(echo "$USERNAME" | base64 | sed 's/=//g')
+    SESSION_NAME="${op}_${base64_u}"
+    if [ "$USERNAME" = "null" ] || [ "$PASSWORD" = "null" ]; then
+        _p "${RED}用户名[.$op.u]或密码[.$op.p]不存在"
+        continue
+    fi
+    if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
+        _p "${RED}用户名[.$op.u]或密码[.$op.p]为空"
+        continue
+    fi
+    _p "sign [$USERNAME] ..."
+    _$op
+    retcode=$?
+    if [ $retcode -eq 0 ]; then
+        if [ -z $SIGN_RET ]; then
+            _p "${GREEN}签到成功"
+        else
+            _p "${GREEN}签到成功, 已连续签到${SIGN_RET}天"
+        fi
+    elif [ $retcode -eq 1 ]; then
+        _p "${YELLOW}今天已经签到"
+    else
+        if [ -z $SIGN_RET ]; then
+            _p "${RED}签到失败"
+        else
+            _p "${RED}签到失败 [$SIGN_RET]"
+        fi
+    fi
+}
+
 i=1
 while true
 do
@@ -274,38 +309,18 @@ do
         *)
             type "_$op" >/dev/null 2>/dev/null
             if [ $? -eq 0 ]; then
-                MODE=$op
-                _p "sign..."
-                SIGN_RET=""
-                USERNAME=$(jq -r ".$op.u" $CONFIG_FILE)
-                PASSWORD=$(jq -r ".$op.p" $CONFIG_FILE)
-                # 部分用户名可能带特殊符号，所以这里做了编码处理
-                base64_u=$(echo "$USERNAME" | base64 | sed 's/=//g')
-                SESSION_NAME="${op}_${base64_u}"
-                if [ "$USERNAME" = "null" ] || [ "$PASSWORD" = "null" ]; then
-                    _p "${RED}用户名[.$op.u]或密码[.$op.p]不存在"
-                    continue
-                fi
-                if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
-                    _p "${RED}用户名[.$op.u]或密码[.$op.p]为空"
-                    continue
-                fi
-                _$op
-                retcode=$?
-                if [ $retcode -eq 0 ]; then
-                    if [ -z $SIGN_RET ]; then
-                        _p "${GREEN}签到成功"
-                    else
-                        _p "${GREEN}签到成功, 已连续签到${SIGN_RET}天"
-                    fi
-                elif [ $retcode -eq 1 ]; then
-                    _p "${YELLOW}今天已经签到"
+                if [ $(jq -r ".$op | type" $CONFIG_FILE) = "array" ]; then
+                    len=$(jq -r ".$op | length" $CONFIG_FILE)
+                    len=$(($len-1))
+                    for ii in $(seq 0 $len); do
+                        USERNAME=$(jq -r ".$op[$ii].u" $CONFIG_FILE)
+                        PASSWORD=$(jq -r ".$op[$ii].p" $CONFIG_FILE)
+                        __sign $op
+                    done
                 else
-                    if [ -z $SIGN_RET ]; then
-                        _p "${RED}签到失败"
-                    else
-                        _p "${RED}签到失败 [$SIGN_RET]"
-                    fi
+                    USERNAME=$(jq -r ".$op.u" $CONFIG_FILE)
+                    PASSWORD=$(jq -r ".$op.p" $CONFIG_FILE)
+                    __sign $op
                 fi
             else
                 _p "$op not exists"

@@ -1,6 +1,12 @@
 {
     "zimuzu" : { "u" : "username", "p" : "password" },
-    "v2ex" : { "u" : "username", "p" : "password" },
-    "smzdm" : { "u" : "username", "p" : "password" },
+    "v2ex" : [
+        { "u" : "username", "p" : "password" },
+        { "u" : "username", "p" : "password" }
+    ],
+    "smzdm" : [
+        { "u" : "username", "p" : "password" },
+        { "u" : "username", "p" : "password" }
+    ],
     "v2dn" : { "u" : "email", "p" : "password" }
 }
