@@ -64,8 +64,8 @@ _zimuzu() {
         return -1
     fi
     http --session $SESSION_NAME $sign_url Referer:$login_url >/dev/null
-    _p "sleep 15s..."
-    sleep 15
+    # _p "sleep 15s..."
+    # sleep 15
     body=$(http --print b --session $SESSION_NAME $dosign_url)
     # _p "SIGN: $body"
     if [ $(echo "$body" | jq '.status') -ne 1 ]; then
@@ -84,13 +84,15 @@ _v2ex() {
     host_url="https://www.v2ex.com"
     v2ex_sign='https://www.v2ex.com/signin'
     http --session $SESSION_NAME $v2ex_sign >$TEMP_FILE
+    USER_KEY=$(grep -oE 'type="text".*[a-z0-9]{64}' $TEMP_FILE | grep -oE '[a-z0-9]{64}')
+    PASS_KEY=$(grep -oE 'type="password".*[a-z0-9]{64}' $TEMP_FILE | grep -oE '[a-z0-9]{64}')
     grep '登出' $TEMP_FILE >/dev/null
     if [ $? -ne 0 ]; then
         once=$(grep 'name="once"' $TEMP_FILE)
         reg_once='value="([0-9]+)" name="once"'
         if [[ $once =~ $reg_once ]]; then
             once=${BASH_REMATCH[1]}
-            http --session $SESSION_NAME -f POST $v2ex_sign "u=${USERNAME}" "p=${PASSWORD}" "once=${once}" "next=/" Referer:$v2ex_sign >$TEMP_FILE
+            http --session $SESSION_NAME -f POST $v2ex_sign "$USER_KEY=${USERNAME}" "$PASS_KEY=${PASSWORD}" "once=${once}" "next=/" Referer:$v2ex_sign >$TEMP_FILE
             grep '用户名和密码无法匹配' $TEMP_FILE >/dev/null
             if [ $? -eq 0 ]; then
                 SIGN_RET="用户名或密码错误"
@@ -285,6 +287,14 @@ do
     if [ $# -gt 0 ]; then
         if [ "$1"x = "all"x ]; then
             op=$(jq -r "keys[$(($i-1))]" $CONFIG_FILE)
+        elif [[ "$1"x = "help"x || "$1"x = "--help"x ]]; then
+            printf "Usage:\n"
+            printf "\t# 签到配置中的所有\n"
+            printf "\t$0 all\n"
+            printf "\t# 直接运行后输入要签到的网站\n"
+            printf "\t$0 v2ex\n"
+            printf "\t# 或者运行参数添加多个需要签到的类型\n"
+            printf "\t$0 smzdm v2ex zimuzu\n"
         else
             op=${!i}
         fi
@@ -323,7 +333,7 @@ do
                     __sign $op
                 fi
             else
-                _p "$op not exists"
+                _p "sign $op config not exists"
                 break
             fi
             ;;
