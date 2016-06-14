@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 RESET="\e[0m"
 RED="${RESET}\e[0;31m"
