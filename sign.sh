@@ -185,8 +185,8 @@ _smzdm() {
         return -1
     fi
     http --session $SESSION_NAME $user_url >$TEMP_FILE
-    grep "登录" $TEMP_FILE >/dev/null
-    if [ $? -eq 0 ]; then
+    grep "退出登录" $TEMP_FILE >/dev/null
+    if [ $? -ne 0 ]; then
         SIGN_RET="登录异常"
         return -1
     fi
