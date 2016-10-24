@@ -1,5 +1,5 @@
 #!/bin/bash
-
+PATH=/usr/local/bin:$PATH
 RESET="\e[0m"
 RED="${RESET}\e[0;31m"
 GREEN="${RESET}\e[0;32m"
