@@ -1,5 +1,5 @@
 #!/bin/bash
-
+PATH=/usr/local/bin:$PATH
 RESET="\e[0m"
 RED="${RESET}\e[0;31m"
 GREEN="${RESET}\e[0;32m"
@@ -56,17 +56,17 @@ _zimuzu() {
     login_ajax="http://www.zimuzu.tv/User/Login/ajaxLogin"
     sign_url="http://www.zimuzu.tv/user/sign"
     dosign_url="http://www.zimuzu.tv/user/sign/dosign"
-    http --session $SESSION_NAME $login_url >/dev/null
-    body=$(http --print b --session $SESSION_NAME -f POST $login_ajax "account=$USERNAME" "password=$PASSWORD" "remember=1" "url_back=$host_url" Referer:$login_url)
+    http --ignore-stdin --session $SESSION_NAME $login_url >/dev/null
+    body=$(http --print b --ignore-stdin --session $SESSION_NAME -f POST $login_ajax "account=$USERNAME" "password=$PASSWORD" "remember=1" "url_back=$host_url" Referer:$login_url)
     # _p "LOGIN: $body"
     if [ $(echo "$body" | jq '.status') -ne 1 ]; then
         SIGN_RET=$(echo "$body" | jq -r '.info')
         return -1
     fi
-    http --session $SESSION_NAME $sign_url Referer:$login_url >/dev/null
+    http --ignore-stdin --session $SESSION_NAME $sign_url Referer:$login_url >/dev/null
     # _p "sleep 15s..."
     # sleep 15
-    body=$(http --print b --session $SESSION_NAME $dosign_url)
+    body=$(http --print b --ignore-stdin --session $SESSION_NAME $dosign_url)
     # _p "SIGN: $body"
     if [ $(echo "$body" | jq '.status') -ne 1 ]; then
         # {"status":0,"info":"","data":0}
@@ -83,7 +83,7 @@ _v2ex() {
     # 登录
     host_url="https://www.v2ex.com"
     v2ex_sign='https://www.v2ex.com/signin'
-    http --session $SESSION_NAME $v2ex_sign >$TEMP_FILE
+    http --ignore-stdin --session $SESSION_NAME $v2ex_sign >$TEMP_FILE
     USER_KEY=$(grep -oE 'type="text".*[a-z0-9]{64}' $TEMP_FILE | grep -oE '[a-z0-9]{64}')
     PASS_KEY=$(grep -oE 'type="password".*[a-z0-9]{64}' $TEMP_FILE | grep -oE '[a-z0-9]{64}')
     grep '登出' $TEMP_FILE >/dev/null
@@ -92,7 +92,7 @@ _v2ex() {
         reg_once='value="([0-9]+)" name="once"'
         if [[ $once =~ $reg_once ]]; then
             once=${BASH_REMATCH[1]}
-            http --session $SESSION_NAME -f POST $v2ex_sign "$USER_KEY=${USERNAME}" "$PASS_KEY=${PASSWORD}" "once=${once}" "next=/" Referer:$v2ex_sign >$TEMP_FILE
+            http --ignore-stdin --session $SESSION_NAME -f POST $v2ex_sign "$USER_KEY=${USERNAME}" "$PASS_KEY=${PASSWORD}" "once=${once}" "next=/" Referer:$v2ex_sign >$TEMP_FILE
             grep '用户名和密码无法匹配' $TEMP_FILE >/dev/null
             if [ $? -eq 0 ]; then
                 SIGN_RET="用户名或密码错误"
@@ -106,8 +106,8 @@ _v2ex() {
 
     # 签到
     mission_daily="https://www.v2ex.com/mission/daily"
-    http --session $SESSION_NAME $host_url >$TEMP_FILE   # 这里需要先访问主页
-    http --session $SESSION_NAME $mission_daily "Referer:$host_url" "User-Agent:$USER_AGENT" >$TEMP_FILE
+    http --ignore-stdin --session $SESSION_NAME $host_url >$TEMP_FILE   # 这里需要先访问主页
+    http --ignore-stdin --session $SESSION_NAME $mission_daily "Referer:$host_url" "User-Agent:$USER_AGENT" >$TEMP_FILE
     redeem=$(grep 'mission/daily/redeem' $TEMP_FILE)
     if ! test "$redeem"; then
         # 已经签到
@@ -115,8 +115,8 @@ _v2ex() {
     fi
     reg_redeem="/mission/daily/redeem\?once=(.*)'"
     if [[ $redeem =~ $reg_redeem ]]; then
-        http --session $SESSION_NAME -f GET "https://www.v2ex.com/mission/daily/redeem?once=${BASH_REMATCH[1]}" "Referer:$mission_daily" "User-Agent:$USER_AGENT" >$TEMP_FILE
-        http --session $SESSION_NAME $mission_daily "Referer:$mission_daily" "User-Agent:$USER_AGENT" >$TEMP_FILE
+        http --ignore-stdin --session $SESSION_NAME -f GET "https://www.v2ex.com/mission/daily/redeem?once=${BASH_REMATCH[1]}" "Referer:$mission_daily" "User-Agent:$USER_AGENT" >$TEMP_FILE
+        http --ignore-stdin --session $SESSION_NAME $mission_daily "Referer:$mission_daily" "User-Agent:$USER_AGENT" >$TEMP_FILE
         grep '每日登录奖励已领取' $TEMP_FILE >/dev/null
         if [ $? -eq 0 ]; then
             cont=$(grep '已连续登录' $TEMP_FILE)
@@ -124,7 +124,7 @@ _v2ex() {
             if [[ $cont =~ $reg_cont ]]; then
                 SIGN_RET="${BASH_REMATCH[1]}"
                 # 获取用户信息
-                http --session $SESSION_NAME $host_url >$TEMP_FILE
+                http --ignore-stdin --session $SESSION_NAME $host_url >$TEMP_FILE
                 user_info=$(grep "bigger.*member" $TEMP_FILE)
                 reg_user='member.*>(.*)</a>'
                 user_name=""
@@ -174,24 +174,24 @@ _smzdm() {
     login_url="https://zhiyou.smzdm.com/user/login?redirect_to=$user_url"
     login_ajax="http://zhiyou.smzdm.com/user/login/ajax_check"
     sign_url="http://zhiyou.smzdm.com/user/checkin/jsonp_checkin"
-    http --session $SESSION_NAME $zhiyou_url "User-Agent:$USER_AGENT" >/dev/null
-    http --session $SESSION_NAME $user_url "User-Agent:$USER_AGENT" >/dev/null
-    http --session $SESSION_NAME $login_url "User-Agent:$USER_AGENT" >/dev/null
-    body=$(http --print b --session $SESSION_NAME -f POST $login_ajax "username=$USERNAME" "password=$PASSWORD" "rememberme=1" "captcha=" "is_third=0" "redirect_to=$user_url" "Referer:$login_url" "User-Agent:$USER_AGENT")
+    http --ignore-stdin --session $SESSION_NAME $zhiyou_url "User-Agent:$USER_AGENT" >/dev/null
+    http --ignore-stdin --session $SESSION_NAME $user_url "User-Agent:$USER_AGENT" >/dev/null
+    http --ignore-stdin --session $SESSION_NAME $login_url "User-Agent:$USER_AGENT" >/dev/null
+    body=$(http --ignore-stdin --print b --session $SESSION_NAME -f POST $login_ajax "username=$USERNAME" "password=$PASSWORD" "rememberme=1" "captcha=" "is_third=0" "redirect_to=$user_url" "Referer:$login_url" "User-Agent:$USER_AGENT")
     # [{"error_code":0,"error_msg":"","is_use_captcha":false,"data":[],"redirect_to":"http:\/\/zhiyou.smzdm.com"}]
     # [{"error_code":111103,"error_msg":"\u60a8\u8f93\u5165\u7684\u8d26\u53f7\/\u5bc6\u7801\u65e0\u6548\uff0c\u8bf7\u91cd\u65b0\u8f93\u5165","is_use_captcha":false,"data":[],"redirect_to":"http:\/\/zhiyou.smzdm.com\/user"}]
     if [ $(echo "$body" | jq '.error_code') -ne 0 ]; then
         SIGN_RET=$(echo "$body" | jq -r '.error_msg')
         return -1
     fi
-    http --session $SESSION_NAME $user_url >$TEMP_FILE
-    grep "登录" $TEMP_FILE >/dev/null
-    if [ $? -eq 0 ]; then
+    http --ignore-stdin --session $SESSION_NAME $user_url >$TEMP_FILE
+    grep "退出登录" $TEMP_FILE >/dev/null
+    if [ $? -ne 0 ]; then
         SIGN_RET="登录异常"
         return -1
     fi
     # _p "登录成功"
-    body=$(http --session $SESSION_NAME $sign_url "User-Agent:$USER_AGENT")
+    body=$(http --ignore-stdin --session $SESSION_NAME $sign_url "User-Agent:$USER_AGENT")
     error_code=$(echo "$body" | jq '.error_code')
     if [ $error_code -ne 0 ]; then
         SIGN_RET="签到异常"
@@ -220,7 +220,7 @@ _v2dn() {
     login_post="http://www.v2dn.com/loginUpdate.php"
     checkin_url="http://www.v2dn.com/checkIn.php"
     point_url="http://www.v2dn.com/mypoints.php"
-    http --session $SESSION_NAME $login_url "User-Agent:$USER_AGENT" >$TEMP_FILE
+    http --ignore-stdin --session $SESSION_NAME $login_url "User-Agent:$USER_AGENT" >$TEMP_FILE
     md5_match=$(grep 'md5' $TEMP_FILE)
     if [ $? -ne 0 ]; then
         SIGN_RET="签到异常"
@@ -229,10 +229,10 @@ _v2dn() {
     reg_md5='md5.*value="(.+)">'
     if [[ $md5_match =~ $reg_md5 ]]; then
         md5str=${BASH_REMATCH[1]}
-        body=$(http --session $SESSION_NAME -f POST $login_post "email=$USERNAME" "password=$PASSWORD" "md5=$md5str" "button= 登 录" "User-Agent:$USER_AGENT" "Referer:$login_url")
-        http --session $SESSION_NAME $host_url >/dev/null
-        http --session $SESSION_NAME $checkin_url >/dev/null
-        http --session $SESSION_NAME $point_url >$TEMP_FILE
+        body=$(http --ignore-stdin --session $SESSION_NAME -f POST $login_post "email=$USERNAME" "password=$PASSWORD" "md5=$md5str" "button= 登 录" "User-Agent:$USER_AGENT" "Referer:$login_url")
+        http --ignore-stdin --session $SESSION_NAME $host_url >/dev/null
+        http --ignore-stdin --session $SESSION_NAME $checkin_url >/dev/null
+        http --ignore-stdin --session $SESSION_NAME $point_url >$TEMP_FILE
         point_match=$(grep 'balance_area' $TEMP_FILE)
         reg_point='([0-9]+)</div>'
         if [[ $point_match =~ $reg_point ]]; then
